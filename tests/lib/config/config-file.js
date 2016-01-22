@@ -441,6 +441,76 @@ describe("ConfigFile", function() {
             });
         });
 
+        describe("Sharable configs", function() {
+            it("should throw when provided with invalid package name", function() {
+                assert.throws(function() {
+                    ConfigFile.load("eslint-config-blah");
+                }, /Cannot read config package: eslint-config-blah\nError: Cannot find module \'eslint-config-blah\'/);
+            });
+
+            it("should load config from the package", function() {
+                var StubbedConfigFile = proxyquire("../../../lib/config/config-file", {
+                    "eslint-config-foo": {
+                        env: { browser: true }
+                    }
+                });
+
+                var config = StubbedConfigFile.load("eslint-config-foo");
+
+                assert.deepEqual(config.env, { browser: true });
+            });
+
+            it("should throw when provided with invalid plugin name", function() {
+                assert.throws(function() {
+                    ConfigFile.load("plugin:eslint-plugin-blah");
+                }, /Cannot read config "undefined" from plugin: "eslint-plugin-blah"\nError: No configuration name specified/);
+            });
+
+            it("should throw when plugin doesn't have configs", function() {
+                var StubbedConfigFile = proxyquire("../../../lib/config/config-file", {
+                    "eslint-plugin-foo": {
+                        rules: {
+                        }
+                    }
+                });
+
+                assert.throws(function() {
+                    StubbedConfigFile.load("plugin:foo/bar");
+                }, /Cannot read config "bar" from plugin: "eslint-plugin-foo\/bar"\nError: Plugin "eslint-plugin-foo" does not expose any configs/);
+            });
+
+            it("should throw when plugin doesn't have configs", function() {
+                var StubbedConfigFile = proxyquire("../../../lib/config/config-file", {
+                    "eslint-plugin-foo": {
+                        configs: {
+                            bar: {
+                                env: { browser: true }
+                            }
+                        }
+                    }
+                });
+
+                assert.throws(function() {
+                    StubbedConfigFile.load("plugin:foo/baz");
+                }, /Cannot read config "baz" from plugin: "eslint-plugin-foo\/baz"\nError: Plugin "eslint-plugin-foo" is missing "baz" configuration/);
+            });
+
+            it("should load config from plugin", function() {
+                var StubbedConfigFile = proxyquire("../../../lib/config/config-file", {
+                    "eslint-plugin-foo": {
+                        configs: {
+                            bar: {
+                                env: { browser: true }
+                            }
+                        }
+                    }
+                });
+
+                var config = StubbedConfigFile.load("plugin:foo/bar");
+
+                assert.deepEqual(config.env, { browser: true });
+            });
+        });
     });
 
     describe("resolve()", function() {
@@ -451,7 +521,10 @@ describe("ConfigFile", function() {
             [ "foo", "eslint-config-foo" ],
             [ "eslint-configfoo", "eslint-config-eslint-configfoo" ],
             [ "@foo/eslint-config", "@foo/eslint-config" ],
-            [ "@foo/bar", "@foo/eslint-config-bar" ]
+            [ "@foo/bar", "@foo/eslint-config-bar" ],
+            [ "plugin:foo/bar", "plugin:eslint-plugin-foo/bar"],
+            [ "plugin:@foo/eslint-plugin/bar", "plugin:@foo/eslint-plugin/bar"],
+            [ "plugin:@foo/bar", "plugin:@foo/eslint-plugin-bar"]
         ], function(input, expected) {
             it("should return " + expected + " when passed " + input, function() {
                 var result = ConfigFile.resolve(input);
