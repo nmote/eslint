@@ -5,3 +5,6 @@ env:
 
 extends:
     "./packages/eslint-config-eslint/default.yml"
+
+files:
+    - { patterns: [ "lib/u*.js" ], config: { rules: { quotes: [ 2, "single" ] } } }
